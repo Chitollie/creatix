@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio - Creatix</title>
+    <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <a href="home.html" class="logo">Creatix</a>
+                <h2 class="page-title">Studio</h2>
+            </div>
+            <div class="header-right">
+                <span class="user-info" id="user-info">Loading...</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">My Games</h3>
+                    <div class="games-list" id="games-list">
+                        <div class="empty-state">No games yet</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <button class="btn-primary btn-new-game" onclick="showNewGameForm()">+ New Game</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Quick Links</h3>
+                    <ul class="menu-list">
+                        <li><a href="home.html" class="menu-link">← Back to Home</a></li>
+                        <li><a href="avatar.html" class="menu-link">Edit Avatar</a></li>
+                        <li><a href="settings.html" class="menu-link">Settings</a></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Main Editor -->
+            <main class="editor">
+                <section class="welcome-section" id="welcome-section">
+                    <h2>Welcome to Studio</h2>
+                    <p>Create and publish your own games on Creatix. Start by creating your first game!</p>
+                    <button class="btn-primary btn-large" onclick="showNewGameForm()">Create Your First Game</button>
+                </section>
+
+                <!-- Game Editor Form (Hidden by default) -->
+                <section class="editor-form" id="editor-form" style="display: none;">
+                    <h2 id="form-title">Create New Game</h2>
+                    
+                    <form id="game-form" onsubmit="saveGame(event)">
+                        <div class="form-group">
+                            <label for="game-name">Game Name</label>
+                            <input type="text" id="game-name" placeholder="My Awesome Game" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="game-description">Description</label>
+                            <textarea id="game-description" placeholder="Describe your game..." rows="4" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="game-genre">Genre</label>
+                            <select id="game-genre" required>
+                                <option value="">Select a genre</option>
+                                <option value="action">Action</option>
+                                <option value="adventure">Adventure</option>
+                                <option value="puzzle">Puzzle</option>
+                                <option value="shooter">Shooter</option>
+                                <option value="rpg">RPG</option>
+                                <option value="simulation">Simulation</option>
+                                <option value="tycoon">Tycoon</option>
+                                <option value="horror">Horror</option>
+                                <option value="comedy">Comedy</option>
+                                <option value="sports">Sports</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="game-max-players">Max Players</label>
+                            <input type="number" id="game-max-players" value="10" min="1" max="1000" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="game-thumbnail">Thumbnail URL</label>
+                            <input type="url" id="game-thumbnail" placeholder="https://example.com/image.jpg">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Save Game</button>
+                            <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
+                            <button type="button" class="btn-danger" id="delete-btn" style="display: none;" onclick="deleteGame()">Delete Game</button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Game Edit View -->
+                <section class="game-details" id="game-details" style="display: none;">
+                    <div class="game-header">
+                        <h2 id="detail-title">Game Title</h2>
+                        <div class="game-status" id="game-status">Draft</div>
+                    </div>
+
+                    <div class="game-stats">
+                        <div class="stat">
+                            <div class="stat-label">Plays</div>
+                            <div class="stat-value" id="stat-plays">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Rating</div>
+                            <div class="stat-value" id="stat-rating">0.0/5</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Favorites</div>
+                            <div class="stat-value" id="stat-favorites">0</div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-primary" onclick="editGame()">Edit Game</button>
+                        <button class="btn-success" id="publish-btn" onclick="publishGame()">Publish</button>
+                        <button class="btn-secondary" onclick="showGamesList()">Back to Games</button>
+                    </div>
+
+                    <div class="game-metadata">
+                        <h3>Game Information</h3>
+                        <p><strong>Description:</strong> <span id="detail-description"></span></p>
+                        <p><strong>Genre:</strong> <span id="detail-genre"></span></p>
+                        <p><strong>Max Players:</strong> <span id="detail-max-players"></span></p>
+                        <p><strong>Created:</strong> <span id="detail-created"></span></p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="studio.js"></script>
+</body>
+</html>

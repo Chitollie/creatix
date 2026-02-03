@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>My Avatar — DIY UGC</title>
+  <link rel="stylesheet" href="/avatar.css">
+  <script src="/auth-guard.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header><a href="/">Home</a> • <a href="/my/avatar">Avatar</a> • <button id="btnLogout">Logout</button></header>
+    <main>
+      <h1>Avatar Editor (R6)</h1>
+      <div id="preview-area">
+        <h3>Preview</h3>
+        <div id="preview-container">
+          <svg id="avatar-svg" width="220" height="320" viewBox="0 0 220 320" preserveAspectRatio="xMidYMid meet"></svg>
+          <div id="save-status" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="recent">Recent</button>
+        <button class="tab-btn" data-tab="body">Body</button>
+        <button class="tab-btn" data-tab="character">Character</button>
+      </div>
+
+      <div class="panel" id="panel-recent">
+        <section class="left">
+          <h2>Your Avatars</h2>
+          <div id="avatars"></div>
+        </section>
+        <section class="right">
+          <h2>Recent Parts</h2>
+          <div id="recent-parts"></div>
+        </section>
+      </div>
+
+      <div class="panel" id="panel-body" style="display:none">
+        <section>
+          <h2>Body Colors</h2>
+          <div class="section-content">
+            <div class="btr-color-selector">
+              <label>Head <input type="color" id="color-head" class="btr-color-head"></label>
+              <label>Torso <input type="color" id="color-torso" class="btr-color-torso"></label>
+              <label>Left Arm <input type="color" id="color-leftArm" class="btr-color-leftArm"></label>
+              <label>Right Arm <input type="color" id="color-rightArm" class="btr-color-rightArm"></label>
+              <label>Left Leg <input type="color" id="color-leftLeg" class="btr-color-leftLeg"></label>
+              <label>Right Leg <input type="color" id="color-rightLeg" class="btr-color-rightLeg"></label>
+            </div>
+            <hr style="margin-top:20px;margin-bottom:12px;">
+            <div class="bodycolors-list" id="bodycolors-list">
+              <!-- palette filled by JS -->
+            </div>
+            <div style="margin-top:12px"><small class="hint">Changes are saved automatically.</small></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="panel" id="panel-character" style="display:none">
+        <section>
+          <h2>Character</h2>
+          <div id="character-options">(placeholder for character options)</div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="/avatar.js"></script>
+</body>
+</html>

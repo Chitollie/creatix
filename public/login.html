@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login — DIY UGC</title>
+  <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="brand">DIY UGC</div>
+    <div class="card">
+      <h1>Log in to DIY UGC</h1>
+      <div class="form-row">
+        <input id="login_username" placeholder="Username" autocomplete="username">
+      </div>
+      <div class="form-row">
+        <input id="login_password" placeholder="Password" type="password" autocomplete="current-password">
+      </div>
+      <div class="form-row actions">
+        <button id="btnLogin">Log in</button>
+        <button id="btnToRegister">Create account</button>
+      </div>
+      <div class="separator">or</div>
+      <div class="register" id="registerBox" style="display:none">
+        <input id="reg_username" placeholder="Choose a username" autocomplete="username">
+        <input id="reg_password" placeholder="Choose a password" type="password" autocomplete="new-password">
+        <div class="form-row"><button id="btnRegister">Register</button></div>
+      </div>
+      <div id="status" class="status"></div>
+    </div>
+    <div class="footer">Prototype — not for production</div>
+  </div>
+
+  <script src="/login.js"></script>
+</body>
+</html>

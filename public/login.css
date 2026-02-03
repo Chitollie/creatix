@@ -1,0 +1,12 @@
+body{font-family:Arial,Helvetica,sans-serif;background:#f2f4f7}
+.login-wrap{max-width:420px;margin:60px auto;text-align:center}
+.brand{font-size:28px;font-weight:700;margin-bottom:12px}
+.card{background:#fff;padding:24px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+.card h1{margin:0 0 12px 0;font-size:20px}
+.form-row{margin:8px 0}
+input{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px}
+button{padding:10px 14px;border-radius:4px;border:none;background:#2d88ff;color:#fff;cursor:pointer}
+.actions{display:flex;gap:8px;justify-content:center}
+.separator{margin:12px 0;color:#888}
+.status{margin-top:8px;color:#b00}
+.footer{margin-top:10px;color:#666;font-size:13px}

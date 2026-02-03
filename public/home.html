@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Creatix</title>
+    <link rel="stylesheet" href="home.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">Creatix</h1>
+            </div>
+            <div class="header-right">
+                <button class="creabux-display" id="creabux-display" onclick="window.location.href='settings.html'; setTimeout(() => window.switchTab && window.switchTab('billing'), 500)" style="background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; font-size: 0.95rem;">💎 Loading...</button>
+                <span class="user-info" id="user-info">Loading...</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar - Friends -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Friends (<span id="friend-count">0</span>)</h3>
+                    <div class="friends-list" id="friends-list">
+                        <div class="empty-state">No friends yet</div>
+                    </div>
+                    <button class="btn-secondary" onclick="window.location.href='#'">Add Friends</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Account</h3>
+                    <ul class="menu-list">
+                        <li><a href="avatar.html" class="menu-link">Edit Avatar</a></li>
+                        <li><a href="studio.html" class="menu-link">Studio</a></li>
+                        <li><a href="settings.html" class="menu-link">Settings</a></li>
+                        <li><a href="#" class="menu-link">Inventory</a></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Main Feed -->
+            <main class="feed">
+                <!-- Search Bar -->
+                <section class="search-section">
+                    <div class="search-container">
+                        <input type="text" id="search-input" class="search-input" placeholder="Search games and players..." onkeyup="handleSearch()">
+                        <div class="search-results" id="search-results" style="display: none;">
+                            <div class="search-results-games" id="search-games-results"></div>
+                            <div class="search-results-players" id="search-players-results"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Welcome Section -->
+                <section class="welcome-section">
+                    <h2>Welcome back, <span id="welcome-name">User</span>!</h2>
+                    <p>Start your adventure by playing games or exploring the catalog</p>
+                </section>
+
+                <!-- Recently Played Games -->
+                <section class="recently-played-section">
+                    <div class="section-header">
+                        <h3>Recently Played</h3>
+                    </div>
+                    <div class="games-grid" id="recently-played-grid">
+                        <div class="empty-state">No games played yet</div>
+                    </div>
+                </section>
+
+                <!-- Popular Games -->
+                <section class="games-section">
+                    <div class="section-header">
+                        <h3>Popular Games</h3>
+                        <div class="sort-controls">
+                            <button class="sort-btn active" data-sort="popular">Popular</button>
+                            <button class="sort-btn" data-sort="trending">Trending</button>
+                            <button class="sort-btn" data-sort="recent">Recent</button>
+                        </div>
+                    </div>
+                    <div class="games-grid" id="games-grid"></div>
+                </section>
+
+                <!-- Featured Game -->
+                <section class="featured-section">
+                    <div class="featured-game">
+                        <div class="featured-image">
+                            <img src="https://via.placeholder.com/600x300?text=Featured+Game" alt="Featured Game">
+                        </div>
+                        <div class="featured-info">
+                            <h3>Featured Game</h3>
+                            <p>Explore trending games and have fun with friends</p>
+                            <button class="btn-primary">Play Now</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- All Games -->
+                <section class="all-games-section">
+                    <h2>All Games</h2>
+                    <div class="games-grid" id="all-games-grid">
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                        <div class="game-card skeleton">
+                            <div class="game-thumbnail"></div>
+                            <div class="game-title"></div>
+                            <div class="game-stats"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="home.js"></script>
+</body>
+</html>

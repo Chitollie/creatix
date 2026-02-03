@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Creatix</title>
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <a href="home.html" class="logo">Creatix</a>
+                <h2 class="page-title">Settings</h2>
+            </div>
+            <div class="header-right">
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar - Settings Tabs -->
+            <aside class="sidebar">
+                <nav class="settings-nav">
+                    <div class="nav-section">
+                        <h3 class="nav-title">Account</h3>
+                        <button class="nav-item active" onclick="switchTab('account')">Account Settings</button>
+                        <button class="nav-item" onclick="switchTab('profile')">Profile</button>
+                        <button class="nav-item" onclick="switchTab('billing')">Billing & Payments</button>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3 class="nav-title">Privacy & Safety</h3>
+                        <button class="nav-item" onclick="switchTab('privacy')">Privacy Settings</button>
+                        <button class="nav-item" onclick="switchTab('security')">Security</button>
+                        <button class="nav-item" onclick="switchTab('blocked')">Blocked Users</button>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3 class="nav-title">Preferences</h3>
+                        <button class="nav-item" onclick="switchTab('notifications')">Notifications</button>
+                        <button class="nav-item" onclick="switchTab('display')">Display & Sound</button>
+                        <button class="nav-item" onclick="switchTab('controls')">Controls</button>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3 class="nav-title">Other</h3>
+                        <button class="nav-item" onclick="switchTab('help')">Help & Support</button>
+                        <button class="nav-item" onclick="switchTab('about')">About</button>
+                    </div>
+                </nav>
+
+                <div class="back-link">
+                    <a href="home.html" class="menu-link">← Back to Home</a>
+                </div>
+            </aside>
+
+            <!-- Settings Content -->
+            <main class="settings-content">
+                <!-- Account Settings Tab -->
+                <section class="settings-tab active" id="tab-account">
+                    <h2>Account Settings</h2>
+                    <div class="settings-group">
+                        <label>Username</label>
+                        <div class="setting-value" id="setting-username">Loading...</div>
+                    </div>
+                    <div class="settings-group">
+                        <label>Change Password</label>
+                        <button class="btn-secondary" onclick="showPasswordChange()">Change Password</button>
+                        <div id="password-form" style="display: none; margin-top: 1rem;">
+                            <input type="password" id="current-password" placeholder="Current Password" class="form-input">
+                            <input type="password" id="new-password" placeholder="New Password" class="form-input">
+                            <input type="password" id="confirm-password" placeholder="Confirm Password" class="form-input">
+                            <button class="btn-primary" onclick="changePassword()">Save Password</button>
+                            <button class="btn-secondary" onclick="hidePasswordChange()">Cancel</button>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <label>Account Status</label>
+                        <div class="setting-value">✅ Active</div>
+                    </div>
+                </section>
+
+                <!-- Profile Tab -->
+                <section class="settings-tab" id="tab-profile">
+                    <h2>Profile Settings</h2>
+                    <div class="settings-group">
+                        <label>Display Name</label>
+                        <input type="text" id="display-name" class="form-input" placeholder="Your display name">
+                        <button class="btn-primary" onclick="saveDisplayName()">Save</button>
+                    </div>
+                    <div class="settings-group">
+                        <label>Bio</label>
+                        <textarea id="bio" class="form-input" placeholder="Tell us about yourself..." rows="4"></textarea>
+                        <button class="btn-primary" onclick="saveBio()">Save Bio</button>
+                    </div>
+                    <div class="settings-group">
+                        <label>Profile Visibility</label>
+                        <select id="profile-visibility" class="form-input">
+                            <option value="public">Public - Everyone can see</option>
+                            <option value="friends">Friends Only</option>
+                            <option value="private">Private - Only me</option>
+                        </select>
+                        <button class="btn-primary" onclick="saveProfileVisibility()">Save</button>
+                    </div>
+                </section>
+
+                <!-- Billing Tab -->
+                <section class="settings-tab" id="tab-billing">
+                    <h2>Billing & Payments</h2>
+                    <div class="settings-group">
+                        <h3>Creabux Balance</h3>
+                        <div class="creabux-display">
+                            💎 <span id="creabux-balance">0</span> Creabux
+                        </div>
+                        <p style="color: #888; font-size: 0.9rem; margin-top: 0.5rem;">1000 Creabux = €10</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Purchase Creabux</h3>
+                        <div class="creabux-packs">
+                            <button class="creabux-pack" onclick="buyCreabux(400, 5)">
+                                <div class="pack-amount">400 Creabux</div>
+                                <div class="pack-price">€5</div>
+                            </button>
+                            <button class="creabux-pack" onclick="buyCreabux(1000, 10)">
+                                <div class="pack-amount">1000 Creabux</div>
+                                <div class="pack-price">€10</div>
+                            </button>
+                            <button class="creabux-pack" onclick="buyCreabux(2500, 20)">
+                                <div class="pack-amount">2500 Creabux</div>
+                                <div class="pack-price">€20</div>
+                                <div class="pack-badge">+250 Bonus</div>
+                            </button>
+                            <button class="creabux-pack" onclick="buyCreabux(10000, 100)">
+                                <div class="pack-amount">10000 Creabux</div>
+                                <div class="pack-price">€100</div>
+                                <div class="pack-badge">+1000 Bonus</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Payment Methods</h3>
+                        <div class="payment-methods">
+                            <div class="payment-method">
+                                <div class="method-icon">💳</div>
+                                <div class="method-info">
+                                    <div class="method-name">Credit Card</div>
+                                    <div class="method-status">No cards added</div>
+                                </div>
+                                <button class="btn-secondary btn-small" onclick="addPaymentMethod('card')">Add</button>
+                            </div>
+                            <div class="payment-method">
+                                <div class="method-icon">💰</div>
+                                <div class="method-info">
+                                    <div class="method-name">PayPal</div>
+                                    <div class="method-status">Not connected</div>
+                                </div>
+                                <button class="btn-secondary btn-small" onclick="addPaymentMethod('paypal')">Connect</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Privacy Tab -->
+                <section class="settings-tab" id="tab-privacy">
+                    <h2>Privacy Settings</h2>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Who can friend me</div>
+                                <div class="toggle-desc">Control who can send you friend requests</div>
+                            </div>
+                            <select class="form-input" style="max-width: 150px;">
+                                <option>Everyone</option>
+                                <option>Friends Only</option>
+                                <option>No One</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Who can message me</div>
+                                <div class="toggle-desc">Control who can send you private messages</div>
+                            </div>
+                            <select class="form-input" style="max-width: 150px;">
+                                <option>Everyone</option>
+                                <option>Friends Only</option>
+                                <option>No One</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Show online status</div>
+                                <div class="toggle-desc">Others can see when you're online</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Security Tab -->
+                <section class="settings-tab" id="tab-security">
+                    <h2>Security</h2>
+                    <div class="settings-group">
+                        <label>Two-Factor Authentication</label>
+                        <div class="security-status">
+                            <span class="status-badge">Not Enabled</span>
+                        </div>
+                        <p style="color: #888; font-size: 0.9rem; margin: 0.5rem 0;">Enhance your account security with 2FA</p>
+                        <button class="btn-primary" onclick="enable2FA()">Enable 2FA</button>
+                    </div>
+                    <div class="settings-group">
+                        <label>Active Sessions</label>
+                        <div class="sessions-list">
+                            <div class="session-item">
+                                <div class="session-info">
+                                    <div class="session-device">Current Device</div>
+                                    <div class="session-time">Active now</div>
+                                </div>
+                                <button class="btn-secondary btn-small" disabled>Current</button>
+                            </div>
+                        </div>
+                        <button class="btn-danger" onclick="logoutAllDevices()">Logout All Other Devices</button>
+                    </div>
+                </section>
+
+                <!-- Notifications Tab -->
+                <section class="settings-tab" id="tab-notifications">
+                    <h2>Notification Preferences</h2>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Friend Requests</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Messages</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Game Notifications</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Email Notifications</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Display & Sound Tab -->
+                <section class="settings-tab" id="tab-display">
+                    <h2>Display & Sound</h2>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Dark Theme</div>
+                                <div class="toggle-desc">Use dark theme by default</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="toggle-setting">
+                            <div class="toggle-info">
+                                <div class="toggle-title">Chat Sounds</div>
+                                <div class="toggle-desc">Play sound on new messages</div>
+                            </div>
+                            <input type="checkbox" class="toggle-checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <label>Language</label>
+                        <select class="form-input">
+                            <option>English</option>
+                            <option>Français</option>
+                            <option>Deutsch</option>
+                            <option>Español</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- About Tab -->
+                <section class="settings-tab" id="tab-about">
+                    <h2>About Creatix</h2>
+                    <div class="about-content">
+                        <p><strong>Creatix v1.0</strong></p>
+                        <p>A Roblox-like UGC platform where users can create, share, and play games.</p>
+                        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+                        <p><strong>Features:</strong></p>
+                        <ul style="margin-left: 1rem; color: #b0b0b0;">
+                            <li>Create custom avatars with R6 models</li>
+                            <li>Publish and share your own games</li>
+                            <li>Virtual currency (Robux) system</li>
+                            <li>Friend system and multiplayer</li>
+                            <li>Game statistics and ratings</li>
+                        </ul>
+                        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+                        <p style="color: #888; font-size: 0.9rem;">© 2026 Creatix. All rights reserved.</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

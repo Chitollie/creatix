@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Profile - Creatix</title>
+    <link rel="stylesheet" href="home.css">
+    <style>
+        .profile-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 3rem 2rem;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            border: 3px solid white;
+            flex-shrink: 0;
+        }
+        .profile-info h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+        }
+        .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .profile-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 2rem 0 1rem 0;
+            color: var(--text-primary);
+        }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .game-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        .game-card-img {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        .game-card-content {
+            padding: 1rem;
+        }
+        .game-card-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .game-card-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+        .error {
+            background: var(--danger-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo"><a href="home.html" style="color: inherit; text-decoration: none;">Creatix</a></h1>
+            </div>
+            <div class="header-right">
+                <button class="creabux-display" id="creabux-display" onclick="window.location.href='settings.html'; setTimeout(() => window.switchTab && window.switchTab('billing'), 500)" style="background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; font-size: 0.95rem;">💎 Loading...</button>
+                <span class="user-info" id="user-info">Loading...</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <main class="feed profile-container" id="profile-container">
+                <div class="loading">Loading profile...</div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const playerId = new URLSearchParams(window.location.search).get('id') || 
+                         window.location.pathname.split('/')[3];
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const token = localStorage.getItem('token');
+            const opts = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(endpoint, opts);
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            return res.json();
+        }
+
+        async function init() {
+            try {
+                const user = await api('/api/user');
+                if (user.id) {
+                    document.getElementById('user-info').textContent = user.username;
+                    const creabuxDisplay = document.getElementById('creabux-display');
+                    if (user.is_admin) {
+                        creabuxDisplay.textContent = '💎 ∞';
+                    } else {
+                        creabuxDisplay.textContent = `💎 ${user.creabux.toLocaleString()}`;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load user:', e);
+                setTimeout(() => window.location.href = 'login.html', 1000);
+            }
+        }
+
+        async function loadProfile() {
+            try {
+                const player = await api(`/api/users/${playerId}`);
+                const playerGames = await api(`/api/users/${playerId}/games`);
+                
+                const container = document.getElementById('profile-container');
+                const avatar = player.username.charAt(0).toUpperCase();
+                
+                let gamesHtml = playerGames.length > 0 
+                    ? playerGames.map(g => `
+                        <div class="game-card" onclick="window.location.href='/games/${g.id}/${encodeURIComponent(g.title)}'">
+                            <div class="game-card-img">🎮</div>
+                            <div class="game-card-content">
+                                <div class="game-card-title">${escapeHtml(g.title)}</div>
+                                <div class="game-card-stats">
+                                    <span>👁 ${(g.plays || 0).toLocaleString()}</span>
+                                    <span>⭐ ${(g.rating || 0).toFixed(1)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')
+                    : '<div class="empty-state">No games created yet</div>';
+                
+                container.innerHTML = `
+                    <div class="profile-header">
+                        <div class="profile-avatar">${avatar}</div>
+                        <div class="profile-info">
+                            <h1>${escapeHtml(player.username)}</h1>
+                            <div class="profile-stats">
+                                <div class="stat">
+                                    <span class="stat-label">Games Created</span>
+                                    <span class="stat-value">${playerGames.length}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Total Plays</span>
+                                    <span class="stat-value">${playerGames.reduce((sum, g) => sum + (g.plays || 0), 0).toLocaleString()}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Member Since</span>
+                                    <span class="stat-value">${new Date(player.created_at || Date.now()).getFullYear()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-content">
+                        <h2 class="section-title">Games by ${escapeHtml(player.username)}</h2>
+                        <div class="games-grid">
+                            ${gamesHtml}
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                console.error('Failed to load profile:', e);
+                document.getElementById('profile-container').innerHTML = 
+                    `<div class="error">Failed to load profile: ${e.message}</div>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        init();
+        loadProfile();
+    </script>
+</body>
+</html>
