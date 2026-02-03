@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const livePlayers = new Map();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -148,6 +149,9 @@ async function initDB() {
       );
       console.log('✓ Default assets, avatars and Creatix game seeded');
     }
+
+    // Ensure Creatix is published so it appears in listings
+    await runAsync(`UPDATE games SET published = TRUE WHERE title = 'Creatix' AND published = FALSE`);
   } catch (e) {
     console.error('DB init error:', e);
     throw e;
@@ -654,6 +658,11 @@ app.get('/player/:id/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'player.html'));
 });
 
+// Serve game detail at /:id/:title (e.g., /1/Creatix)
+app.get(/^\/(\d+)\/([^/]+)$/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'game.html'));
+});
+
 // Custom rewrites (pretty URLs -> static files)
 const rewrites = [
   { source: '/profil', destination: '/profil.html' },
@@ -700,6 +709,54 @@ io.on('connection', (socket) => {
   socket.on('signal', (data) => {
     const { to } = data;
     io.to(to).emit('signal', Object.assign({}, data, { from: socket.id }));
+  });
+
+  socket.on('game:join', (payload) => {
+    const { gameId, userId, username, colors, pos } = payload || {};
+    const room = `game:${gameId}`;
+    socket.join(room);
+    const player = {
+      id: socket.id,
+      userId,
+      username,
+      colors,
+      pos: pos || { x: 50, y: 85 }
+    };
+    livePlayers.set(socket.id, { room, player });
+    const others = [];
+    for (const [id, entry] of livePlayers.entries()) {
+      if (id === socket.id) continue;
+      if (entry.room === room) others.push(entry.player);
+    }
+    socket.emit('game:players', others);
+    socket.to(room).emit('game:player-joined', player);
+  });
+
+  socket.on('game:pos', ({ gameId, pos }) => {
+    const entry = livePlayers.get(socket.id);
+    if (!entry) return;
+    entry.player.pos = pos;
+    socket.to(entry.room).emit('game:pos', { id: socket.id, pos });
+  });
+
+  socket.on('voice:offer', ({ to, offer }) => {
+    io.to(to).emit('voice:offer', { from: socket.id, offer });
+  });
+
+  socket.on('voice:answer', ({ to, answer }) => {
+    io.to(to).emit('voice:answer', { from: socket.id, answer });
+  });
+
+  socket.on('voice:ice', ({ to, candidate }) => {
+    io.to(to).emit('voice:ice', { from: socket.id, candidate });
+  });
+
+  socket.on('disconnect', () => {
+    const entry = livePlayers.get(socket.id);
+    if (entry) {
+      socket.to(entry.room).emit('game:player-left', { id: socket.id });
+      livePlayers.delete(socket.id);
+    }
   });
 });
 

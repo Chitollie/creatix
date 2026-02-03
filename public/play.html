@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creatix - Play</title>
+  <link rel="stylesheet" href="home.css">
+  <style>
+    :root {
+      --floor-green: #2fb34a;
+      --floor-green-dark: #1f8f39;
+      --sky-blue: #6bb8ff;
+      --lego-outline: #2b2b2b;
+    }
+    body {
+      margin: 0;
+      background: var(--sky-blue);
+      color: #ffffff;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+    .game-stage {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(180deg, var(--sky-blue) 0 55%, var(--floor-green) 55% 100%);
+    }
+    .ground-grid {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 45%;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.08)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 60px),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 1px, transparent 1px 60px),
+        linear-gradient(180deg, var(--floor-green), var(--floor-green-dark));
+    }
+    .world {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .avatar {
+      position: absolute;
+      width: 70px;
+      height: 120px;
+      transform: translate(-50%, -100%);
+    }
+    .lego-part {
+      position: absolute;
+      border: 2px solid var(--lego-outline);
+      box-sizing: border-box;
+    }
+    .lego-head { width: 40px; height: 30px; left: 15px; top: 0; border-radius: 6px; display: grid; place-items: center; }
+    .lego-face {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lego-eye {
+      width: 4px;
+      height: 4px;
+      background: #1b1b1b;
+      border-radius: 50%;
+    }
+    .lego-mouth {
+      width: 12px;
+      height: 4px;
+      border-bottom: 2px solid #1b1b1b;
+      border-radius: 0 0 8px 8px;
+      margin-left: 4px;
+    }
+    .lego-torso { width: 50px; height: 40px; left: 10px; top: 34px; border-radius: 6px; }
+    .lego-arm { width: 12px; height: 38px; top: 36px; border-radius: 6px; }
+    .lego-arm.left { left: -2px; }
+    .lego-arm.right { right: -2px; }
+    .lego-leg { width: 18px; height: 42px; top: 78px; border-radius: 6px; }
+    .lego-leg.left { left: 16px; }
+    .lego-leg.right { right: 16px; }
+    .name-tag {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 2px 6px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .obstacle {
+      position: absolute;
+      border: 2px solid var(--lego-outline);
+      background: #d84d3f;
+      border-radius: 8px;
+    }
+    .spawn-plate {
+      position: absolute;
+      border: 2px solid var(--lego-outline);
+      background: #3b82f6;
+      border-radius: 10px;
+      opacity: 0.85;
+    }
+    .hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 10px 14px;
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+    }
+    .hud-title {
+      font-weight: 700;
+    }
+    .leave-btn {
+      border: none;
+      background: #ff3b3b;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .hint {
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+    .mic-btn {
+      border: none;
+      background: #1f1f1f;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .mic-btn.on {
+      background: #00c26e;
+    }
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .confirm-card {
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 20px 22px;
+      min-width: 280px;
+      text-align: center;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-yes {
+      background: #00c26e;
+      color: #fff;
+    }
+    .btn-no {
+      background: #444;
+      color: #fff;
+    }
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(180deg, #5aa8ff, #2fb34a);
+      display: grid;
+      place-items: center;
+      z-index: 30;
+    }
+    .loading-card {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 24px 28px;
+      border-radius: 12px;
+      min-width: 280px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(6px);
+    }
+    .loading-bar {
+      height: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .loading-fill {
+      height: 100%;
+      width: 0%;
+      background: #00c26e;
+      transition: width 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-stage">
+    <div class="ground-grid"></div>
+    <div class="world" id="world"></div>
+  </div>
+
+  <div class="hud">
+    <div class="hud-title" id="game-title">Creatix</div>
+    <button class="mic-btn" id="mic-btn">Mic Off</button>
+    <button class="leave-btn" id="leave-btn">Leave (L)</button>
+    <div class="hint">Echap pour quitter</div>
+  </div>
+
+  <div class="confirm-overlay" id="confirm-overlay" aria-hidden="true">
+    <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div id="confirm-title">Quitter le jeu ?</div>
+      <div class="confirm-actions">
+        <button class="btn btn-yes" id="confirm-yes">Oui (Entrée)</button>
+        <button class="btn btn-no" id="confirm-no">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-card">
+      <div id="loading-text">Loading world...</div>
+      <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const gameId = params.get('gameId') || '1';
+    const titleParam = params.get('title') || 'Creatix';
+    const title = decodeURIComponent(titleParam).replace(/-/g, ' ');
+    const sessionId = params.get('session') || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const overlay = document.getElementById('confirm-overlay');
+    const leaveBtn = document.getElementById('leave-btn');
+    const yesBtn = document.getElementById('confirm-yes');
+    const noBtn = document.getElementById('confirm-no');
+    const titleEl = document.getElementById('game-title');
+    const micBtn = document.getElementById('mic-btn');
+    const worldEl = document.getElementById('world');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingFill = document.getElementById('loading-fill');
+    const loadingText = document.getElementById('loading-text');
+    titleEl.textContent = title;
+
+    const socket = io();
+    const players = new Map();
+    let me = null;
+    let localPos = { x: 50, y: 55 };
+    let localPx = { x: 0, y: 0 };
+    let localVel = { x: 0, y: 0 };
+    let onGround = false;
+    let localAvatar = null;
+    let localStream = null;
+    let audioContext = null;
+    let micEnabled = false;
+    const peerConnections = new Map();
+    const peerAudio = new Map();
+    const keys = new Set();
+
+    const avatarSize = { width: 50, height: 110 };
+    const worldState = { width: window.innerWidth, height: window.innerHeight, groundY: 0 };
+    const obstacles = [
+      { id: 'block-1', x: 32, y: 70, w: 10, h: 10 },
+      { id: 'block-2', x: 55, y: 66, w: 12, h: 12 },
+      { id: 'block-3', x: 70, y: 74, w: 8, h: 8 }
+    ];
+    const spawnPoints = [
+      { x: 20, y: 55 },
+      { x: 50, y: 55 },
+      { x: 80, y: 55 }
+    ];
+
+    function setLoading(progress, text) {
+      if (loadingFill) loadingFill.style.width = `${progress}%`;
+      if (loadingText && text) loadingText.textContent = text;
+      if (progress >= 100) loadingOverlay.style.display = 'none';
+    }
+
+    async function api(endpoint) {
+      const token = localStorage.getItem('token');
+      const res = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      return res.json();
+    }
+
+    function updateWorldMetrics() {
+      worldState.width = window.innerWidth;
+      worldState.height = window.innerHeight;
+      worldState.groundY = worldState.height * 0.55 + 4;
+    }
+
+    function percentToPx(pos) {
+      return {
+        x: (pos.x / 100) * worldState.width,
+        y: (pos.y / 100) * worldState.height
+      };
+    }
+
+    function pxToPercent(pos) {
+      return {
+        x: (pos.x / worldState.width) * 100,
+        y: (pos.y / worldState.height) * 100
+      };
+    }
+
+    function buildWorld() {
+      updateWorldMetrics();
+      worldEl.querySelectorAll('.obstacle, .spawn-plate').forEach(el => el.remove());
+      spawnPoints.forEach((s) => {
+        const plate = document.createElement('div');
+        plate.className = 'spawn-plate';
+        plate.style.left = `${s.x}%`;
+        plate.style.top = `${s.y}%`;
+        plate.style.width = '12%';
+        plate.style.height = '6%';
+        plate.style.transform = 'translate(-50%, -50%)';
+        worldEl.appendChild(plate);
+      });
+      obstacles.forEach((o) => {
+        const block = document.createElement('div');
+        block.className = 'obstacle';
+        block.dataset.id = o.id;
+        block.style.left = `${o.x}%`;
+        block.style.top = `${o.y}%`;
+        block.style.width = `${o.w}%`;
+        block.style.height = `${o.h}%`;
+        block.style.transform = 'translate(-50%, -100%)';
+        worldEl.appendChild(block);
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      updateWorldMetrics();
+      localPx = percentToPx(localPos);
+      updateAllPositions();
+    });
+
+    function openConfirm() {
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+      yesBtn.focus();
+    }
+
+    function closeConfirm() {
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+      leaveBtn.focus();
+    }
+
+    function leaveGame() {
+      const safeTitle = encodeURIComponent(title.replace(/\s+/g, '-'));
+      window.location.href = `/${gameId}/${safeTitle}`;
+    }
+
+    leaveBtn.addEventListener('click', openConfirm);
+    yesBtn.addEventListener('click', leaveGame);
+    noBtn.addEventListener('click', closeConfirm);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (overlay.style.display === 'flex') {
+          closeConfirm();
+        } else {
+          openConfirm();
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'l') {
+        openConfirm();
+        return;
+      }
+
+      if (overlay.style.display === 'flex' && e.key === 'Enter') {
+        leaveGame();
+      }
+    });
+
+    function createAvatarElement(player) {
+      const el = document.createElement('div');
+      el.className = 'avatar';
+      el.dataset.id = player.id;
+      el.innerHTML = `
+        <div class="name-tag">${player.username}</div>
+        <div class="lego-part lego-head">
+          <div class="lego-face">
+            <div class="lego-eye"></div>
+            <div class="lego-eye"></div>
+            <div class="lego-mouth"></div>
+          </div>
+        </div>
+        <div class="lego-part lego-torso"></div>
+        <div class="lego-part lego-arm left"></div>
+        <div class="lego-part lego-arm right"></div>
+        <div class="lego-part lego-leg left"></div>
+        <div class="lego-part lego-leg right"></div>
+      `;
+      applyColors(el, player.colors || {});
+      worldEl.appendChild(el);
+      return el;
+    }
+
+    function applyColors(el, colors) {
+      const get = (k, fallback) => colors[k] || fallback;
+      el.querySelector('.lego-head').style.background = get('head', '#f2d0c9');
+      el.querySelector('.lego-torso').style.background = get('torso', '#cfcfcf');
+      el.querySelector('.lego-arm.left').style.background = get('leftArm', '#cfcfcf');
+      el.querySelector('.lego-arm.right').style.background = get('rightArm', '#cfcfcf');
+      el.querySelector('.lego-leg.left').style.background = get('leftLeg', '#cfcfcf');
+      el.querySelector('.lego-leg.right').style.background = get('rightLeg', '#cfcfcf');
+    }
+
+    function setAvatarPosition(el, pos) {
+      el.style.left = `${pos.x}%`;
+      el.style.top = `${pos.y}%`;
+    }
+
+    function updateAllPositions() {
+      players.forEach((p) => {
+        if (!p.el) return;
+        setAvatarPosition(p.el, p.pos);
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (overlay.style.display === 'flex') return;
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+      keys.add(e.key.toLowerCase());
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys.delete(e.key.toLowerCase());
+    });
+
+    async function loadAvatar() {
+      const user = await api('/api/user');
+      const avatars = await api('/avatars');
+      const owned = (avatars.avatars || []).filter(a => a.owner === user.id);
+      let avatar = owned.find(a => a.is_default) || owned[0] || (avatars.avatars || [])[0];
+      const colors = (avatar && avatar.data && avatar.data.colors) || {};
+      localAvatar = { colors };
+      return { user, colors };
+    }
+
+    function initLocalPlayer(user, colors) {
+      const spawn = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+      localPos = { x: spawn.x, y: spawn.y };
+      localPx = percentToPx(localPos);
+      const player = { id: socket.id, username: user.username, pos: localPos, colors };
+      player.el = createAvatarElement(player);
+      me = player;
+      players.set(player.id, player);
+      setAvatarPosition(player.el, localPos);
+    }
+
+    function startLoadingSequence() {
+      let progress = 0;
+      const timer = setInterval(() => {
+        progress = Math.min(95, progress + 6);
+        setLoading(progress, 'Loading world...');
+        if (progress >= 95) clearInterval(timer);
+      }, 120);
+    }
+
+    function finishLoading() {
+      setLoading(100, 'Ready');
+    }
+
+    function getObstacleRectsPx() {
+      return obstacles.map((o) => {
+        const center = percentToPx({ x: o.x, y: o.y });
+        const w = (o.w / 100) * worldState.width;
+        const h = (o.h / 100) * worldState.height;
+        const left = center.x - w / 2;
+        const right = center.x + w / 2;
+        const top = center.y - h;
+        const bottom = center.y;
+        return { left, right, top, bottom };
+      });
+    }
+
+    function stepPhysics(dt) {
+      const speed = 220;
+      const gravity = 1400;
+      const jumpSpeed = 520;
+
+      let moveX = 0;
+      if (keys.has('a') || keys.has('arrowleft')) moveX -= 1;
+      if (keys.has('d') || keys.has('arrowright')) moveX += 1;
+      localVel.x = moveX * speed;
+
+      if ((keys.has('w') || keys.has('arrowup') || keys.has(' ')) && onGround) {
+        localVel.y = -jumpSpeed;
+        onGround = false;
+      }
+
+      localVel.y += gravity * dt;
+
+      const prevY = localPx.y;
+      let nextX = localPx.x + localVel.x * dt;
+      let nextY = localPx.y + localVel.y * dt;
+
+      const minX = avatarSize.width;
+      const maxX = worldState.width - avatarSize.width;
+      nextX = Math.min(maxX, Math.max(minX, nextX));
+
+      onGround = false;
+      if (nextY > worldState.groundY) {
+        nextY = worldState.groundY;
+        localVel.y = 0;
+        onGround = true;
+      }
+
+      if (localVel.y >= 0) {
+        const rects = getObstacleRectsPx();
+        for (const rect of rects) {
+          const withinX = nextX >= rect.left && nextX <= rect.right;
+          const crossed = prevY <= rect.top && nextY >= rect.top;
+          if (withinX && crossed) {
+            nextY = rect.top;
+            localVel.y = 0;
+            onGround = true;
+            break;
+          }
+        }
+      }
+
+      localPx = { x: nextX, y: nextY };
+      localPos = pxToPercent(localPx);
+      if (me && me.el) setAvatarPosition(me.el, localPos);
+    }
+
+    let lastTick = 0;
+    let lastSend = 0;
+    function gameLoop(ts) {
+      if (!lastTick) lastTick = ts;
+      const dt = Math.min(0.05, (ts - lastTick) / 1000);
+      lastTick = ts;
+
+      stepPhysics(dt);
+      updateAudioVolumes();
+
+      if (ts - lastSend > 80) {
+        socket.emit('game:pos', { gameId, pos: localPos });
+        lastSend = ts;
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function ensureAudioContext() {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      return audioContext;
+    }
+
+    async function enableMic() {
+      if (micEnabled) return;
+      micEnabled = true;
+      micBtn.classList.add('on');
+      micBtn.textContent = 'Mic On';
+      if (!localStream) {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      localStream.getAudioTracks().forEach(t => t.enabled = true);
+      createPeerConnectionsForAll();
+    }
+
+    function disableMic() {
+      micEnabled = false;
+      micBtn.classList.remove('on');
+      micBtn.textContent = 'Mic Off';
+      if (localStream) {
+        localStream.getAudioTracks().forEach(t => t.enabled = false);
+      }
+    }
+
+    micBtn.addEventListener('click', async () => {
+      try {
+        if (micEnabled) disableMic();
+        else await enableMic();
+      } catch (e) {
+        alert('Microphone permission needed.');
+        disableMic();
+      }
+    });
+
+    function createPeerConnection(remoteId) {
+      if (peerConnections.has(remoteId)) return peerConnections.get(remoteId);
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('voice:ice', { to: remoteId, candidate: event.candidate });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        const stream = event.streams[0];
+        if (peerAudio.has(remoteId)) return;
+        const ctx = ensureAudioContext();
+        const source = ctx.createMediaStreamSource(stream);
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        source.connect(gain).connect(ctx.destination);
+        peerAudio.set(remoteId, { gain });
+        updateAudioVolumes();
+      };
+
+      if (localStream) {
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+      }
+
+      peerConnections.set(remoteId, pc);
+      return pc;
+    }
+
+    async function createOffer(remoteId) {
+      const pc = createPeerConnection(remoteId);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('voice:offer', { to: remoteId, offer: pc.localDescription });
+    }
+
+    async function handleOffer(from, offer) {
+      const pc = createPeerConnection(from);
+      await pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('voice:answer', { to: from, answer: pc.localDescription });
+    }
+
+    async function handleAnswer(from, answer) {
+      const pc = peerConnections.get(from);
+      if (!pc) return;
+      await pc.setRemoteDescription(answer);
+    }
+
+    async function handleIce(from, candidate) {
+      const pc = peerConnections.get(from);
+      if (!pc) return;
+      await pc.addIceCandidate(candidate);
+    }
+
+    function createPeerConnectionsForAll() {
+      players.forEach((p, id) => {
+        if (id === socket.id) return;
+        if (socket.id < id) {
+          createOffer(id);
+        }
+      });
+    }
+
+    function updateAudioVolumes() {
+      players.forEach((p, id) => {
+        if (id === socket.id) return;
+        const audio = peerAudio.get(id);
+        if (!audio) return;
+        const dx = (p.pos.x - localPos.x);
+        const dy = (p.pos.y - localPos.y);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = 25;
+        const volume = Math.max(0, 1 - dist / maxDist);
+        audio.gain.gain.value = volume;
+      });
+    }
+
+    async function bootstrap() {
+      setLoading(10, 'Connecting...');
+      startLoadingSequence();
+      buildWorld();
+      const { user, colors } = await loadAvatar();
+      setLoading(40, 'Preparing avatar...');
+      initLocalPlayer(user, colors);
+      socket.emit('game:join', { gameId, sessionId, userId: user.id, username: user.username, colors, pos: localPos });
+      setLoading(70, 'Joining server...');
+      requestAnimationFrame(gameLoop);
+    }
+
+    socket.on('connect', () => {
+      bootstrap().catch(console.error);
+    });
+
+    socket.on('game:players', (list) => {
+      list.forEach(p => {
+        if (players.has(p.id)) return;
+        const player = { ...p, el: createAvatarElement(p) };
+        players.set(p.id, player);
+        setAvatarPosition(player.el, player.pos);
+      });
+      updateAudioVolumes();
+      finishLoading();
+    });
+
+    socket.on('game:player-joined', (p) => {
+      if (players.has(p.id)) return;
+      const player = { ...p, el: createAvatarElement(p) };
+      players.set(p.id, player);
+      setAvatarPosition(player.el, player.pos);
+      updateAudioVolumes();
+      if (micEnabled) createPeerConnectionsForAll();
+    });
+
+    socket.on('game:player-left', ({ id }) => {
+      const p = players.get(id);
+      if (p && p.el) p.el.remove();
+      players.delete(id);
+      const pc = peerConnections.get(id);
+      if (pc) pc.close();
+      peerConnections.delete(id);
+      peerAudio.delete(id);
+    });
+
+    socket.on('game:pos', ({ id, pos }) => {
+      const p = players.get(id);
+      if (!p) return;
+      p.pos = pos;
+      if (p.el) setAvatarPosition(p.el, pos);
+      updateAudioVolumes();
+    });
+
+    socket.on('voice:offer', ({ from, offer }) => handleOffer(from, offer));
+    socket.on('voice:answer', ({ from, answer }) => handleAnswer(from, answer));
+    socket.on('voice:ice', ({ from, candidate }) => handleIce(from, candidate));
+  </script>
+</body>
+</html>

@@ -140,8 +140,12 @@
     </div>
 
     <script>
-        const gameId = new URLSearchParams(window.location.search).get('id') || 
-                       window.location.pathname.split('/')[3];
+        const gameId = (() => {
+            const qsId = new URLSearchParams(window.location.search).get('id');
+            if (qsId) return qsId;
+            const match = window.location.pathname.match(/\/(\d+)(?:\/|$)/);
+            return match ? match[1] : null;
+        })();
 
         async function api(endpoint, method = 'GET', body = null) {
             const token = localStorage.getItem('token');
@@ -229,7 +233,10 @@
         }
 
         function playGame(id) {
-            alert('Game #' + id + ' would launch here in a full implementation!');
+            const title = document.querySelector('.game-header h1')?.textContent || 'Creatix';
+            const safeTitle = encodeURIComponent(title.replace(/\s+/g, '-'));
+            const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            window.location.href = `/play.html?gameId=${encodeURIComponent(id)}&title=${safeTitle}&session=${sessionId}`;
         }
 
         function escapeHtml(text) {

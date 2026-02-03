@@ -96,6 +96,11 @@ async function loadGames() {
         // Display all games
         displayGames(sortedGames, 'all-games-grid');
 
+        // Update featured game (first by popularity)
+        if (sortedGames.length > 0) {
+            updateFeaturedGame(sortedGames[0]);
+        }
+
         // Add sort button listeners
         document.querySelectorAll('.sort-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -157,11 +162,27 @@ function displayGames(games, gridId) {
         
         gameCard.addEventListener('click', () => {
             // Navigate to game detail page with friendly URL
-            window.location.href = `/games/${game.id}/${encodeURIComponent(game.title || game.name)}`;
+            window.location.href = `/${game.id}/${encodeURIComponent(game.title || game.name)}`;
         });
 
         grid.appendChild(gameCard);
     });
+}
+
+function updateFeaturedGame(game) {
+    const img = document.getElementById('featured-image');
+    const title = document.getElementById('featured-title');
+    const desc = document.getElementById('featured-desc');
+    const play = document.getElementById('featured-play');
+
+    if (img) img.src = game.thumbnail || `https://via.placeholder.com/600x300?text=${encodeURIComponent(game.title || game.name)}`;
+    if (title) title.textContent = game.title || game.name || 'Featured Game';
+    if (desc) desc.textContent = game.description || 'The featured experience on Creatix.';
+    if (play) {
+        play.onclick = () => {
+            window.location.href = `/${game.id}/${encodeURIComponent(game.title || game.name)}`;
+        };
+    }
 }
 
 // Display demo games if API fails
@@ -224,7 +245,8 @@ async function handleSearch(event) {
                 `;
                 resultItem.style.cursor = 'pointer';
                 resultItem.addEventListener('click', () => {
-                    window.location.href = `game.html?id=${game.id}`;
+                    const name = encodeURIComponent(game.title || game.name || 'Game');
+                    window.location.href = `/${game.id}/${name}`;
                 });
                 gamesResultsDiv.appendChild(resultItem);
             });
