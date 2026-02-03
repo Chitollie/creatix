@@ -3,10 +3,10 @@ const express = require('express');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const { Server } = require('socket.io');
 const path = require('path');
+const { Pool } = require('pg');
 
 const APP_SECRET = process.env.APP_SECRET || 'dev_secret_change_me';
 const PORT = process.env.PORT || 3000;
@@ -21,103 +21,121 @@ app.use(express.static(path.join(__dirname, 'public')));
 const uploadsDir = path.join(__dirname, 'uploads');
 const upload = multer({ dest: uploadsDir });
 
-// Promisified DB helpers
-const db = new sqlite3.Database(path.join(__dirname, 'data.sqlite'));
-const runAsync = (sql, params = []) => new Promise((res, rej) => {
-  db.run(sql, params, function(e) { e ? rej(e) : res(this); });
+// Postgres helpers
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('Missing DATABASE_URL. Set it in your environment (Render + Neon).');
+  process.exit(1);
+}
+
+const useSSL = /sslmode=require/i.test(DATABASE_URL);
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: useSSL ? { rejectUnauthorized: false } : false
 });
-const getAsync = (sql, params = []) => new Promise((res, rej) => {
-  db.get(sql, params, (e, r) => e ? rej(e) : res(r));
-});
-const allAsync = (sql, params = []) => new Promise((res, rej) => {
-  db.all(sql, params, (e, r) => e ? rej(e) : res(r || []));
-});
+
+const runAsync = (sql, params = []) => pool.query(sql, params);
+const getAsync = async (sql, params = []) => {
+  const res = await pool.query(sql, params);
+  return res.rows[0] || null;
+};
+const allAsync = async (sql, params = []) => {
+  const res = await pool.query(sql, params);
+  return res.rows || [];
+};
 
 // Initialize DB
 async function initDB() {
   try {
     await runAsync(`CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       username TEXT UNIQUE,
       password TEXT,
       balance INTEGER DEFAULT 0,
       creabux INTEGER DEFAULT 1000,
-      is_admin INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      is_admin BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
     await runAsync(`CREATE TABLE IF NOT EXISTS assets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       owner INTEGER,
       filename TEXT,
       type TEXT,
       metadata TEXT
     )`);
     await runAsync(`CREATE TABLE IF NOT EXISTS games (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       owner INTEGER,
       title TEXT,
       description TEXT,
       metadata TEXT,
       plays INTEGER DEFAULT 0,
       rating REAL DEFAULT 0,
-      published INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      published BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
     await runAsync(`CREATE TABLE IF NOT EXISTS avatars (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       owner INTEGER,
       name TEXT,
       data TEXT,
-      is_default INTEGER DEFAULT 0
+      is_default BOOLEAN DEFAULT FALSE
     )`);
     await runAsync(`CREATE TABLE IF NOT EXISTS reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       reporter INTEGER,
       content_type TEXT,
       content_id INTEGER,
       reason TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
     await runAsync(`CREATE TABLE IF NOT EXISTS transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER,
       amount INTEGER,
       type TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
     let admin = await getAsync(`SELECT id FROM users WHERE username = 'admin'`);
     if (!admin) {
       const hash = bcrypt.hashSync('adminpass', 10);
-      const res = await runAsync(`INSERT INTO users (username, password, balance, creabux, is_admin) VALUES (?, ?, ?, ?, 1)`,
-        ['admin', hash, 0, 999999999]);
-      admin = { id: res.lastID };
+      const res = await runAsync(
+        `INSERT INTO users (username, password, balance, creabux, is_admin)
+         VALUES ($1, $2, $3, $4, TRUE)
+         RETURNING id`,
+        ['admin', hash, 0, 999999999]
+      );
+      admin = { id: res.rows[0].id };
       console.log('✓ Admin user seeded');
     }
 
     const assetCount = await getAsync(`SELECT COUNT(*) as c FROM assets`);
-    if (!assetCount || assetCount.c === 0) {
+    const assetTotal = parseInt(assetCount?.c || '0', 10);
+    if (assetTotal === 0) {
       const slots = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
       const parts = {};
       for (const g of ['male', 'female']) {
         parts[g] = {};
         for (const s of slots) {
           const res = await runAsync(
-            `INSERT INTO assets (owner, filename, type, metadata) VALUES (?, ?, ?, ?)`,
+            `INSERT INTO assets (owner, filename, type, metadata)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id`,
             [admin.id, `r6_${s}_${g}`, 'bodypart', JSON.stringify({ slot: s, gender: g, name: `R6 ${s} ${g}` })]
           );
-          parts[g][s] = res.lastID;
+          parts[g][s] = res.rows[0].id;
         }
       }
 
       await runAsync(
-        `INSERT INTO avatars (owner, name, data, is_default) VALUES (?, ?, ?, 1)`,
+        `INSERT INTO avatars (owner, name, data, is_default) VALUES ($1, $2, $3, TRUE)`,
         [admin.id, 'R6_Male', JSON.stringify({ type: 'r6', gender: 'male', parts: parts.male,
           colors: { head: '#ffdbac', torso: '#0066cc', leftArm: '#ffdbac', rightArm: '#ffdbac', leftLeg: '#0066cc', rightLeg: '#0066cc' }
         })]
       );
       await runAsync(
-        `INSERT INTO avatars (owner, name, data, is_default) VALUES (?, ?, ?, 1)`,
+        `INSERT INTO avatars (owner, name, data, is_default) VALUES ($1, $2, $3, TRUE)`,
         [admin.id, 'R6_Female', JSON.stringify({ type: 'r6', gender: 'female', parts: parts.female,
           colors: { head: '#ffdbac', torso: '#ff66cc', leftArm: '#ffdbac', rightArm: '#ffdbac', leftLeg: '#ff66cc', rightLeg: '#ff66cc' }
         })]
@@ -125,7 +143,7 @@ async function initDB() {
       
       // Seed first game "Creatix"
       const gameRes = await runAsync(
-        `INSERT INTO games (owner, title, description, metadata) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO games (owner, title, description, metadata) VALUES ($1, $2, $3, $4)`,
         [admin.id, 'Creatix', 'The official Creatix game creation platform showcase!', JSON.stringify({ genre: 'simulation', maxPlayers: 100 })]
       );
       console.log('✓ Default assets, avatars and Creatix game seeded');
@@ -158,9 +176,13 @@ app.post('/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
     const hash = await bcrypt.hash(password, 10);
-    const result = await runAsync(`INSERT INTO users (username, password, balance, creabux, is_admin) VALUES (?, ?, ?, ?, 0)`,
-      [username, hash, 0, 1000]);
-    const user = { id: result.lastID, username };
+    const result = await runAsync(
+      `INSERT INTO users (username, password, balance, creabux, is_admin)
+       VALUES ($1, $2, $3, $4, FALSE)
+       RETURNING id`,
+      [username, hash, 0, 1000]
+    );
+    const user = { id: result.rows[0].id, username };
     res.json({ token: generateToken(user), user });
   } catch (err) {
     res.status(400).json({ error: 'User exists' });
@@ -171,7 +193,7 @@ app.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
-    const row = await getAsync(`SELECT * FROM users WHERE username = ?`, [username]);
+    const row = await getAsync(`SELECT * FROM users WHERE username = $1`, [username]);
     if (!row) return res.status(400).json({ error: 'Invalid credentials' });
     const ok = await bcrypt.compare(password, row.password);
     if (!ok) return res.status(400).json({ error: 'Invalid credentials' });
@@ -184,7 +206,7 @@ app.post('/login', async (req, res) => {
 
 app.get('/me', authMiddleware, async (req, res) => {
   try {
-    const row = await getAsync(`SELECT id, username, balance, creabux, is_admin FROM users WHERE id = ?`, [req.user.id]);
+    const row = await getAsync(`SELECT id, username, balance, creabux, is_admin FROM users WHERE id = $1`, [req.user.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     res.json({ id: row.id, username: row.username, balance: row.balance, creabux: row.creabux, is_admin: !!row.is_admin });
   } catch (err) {
@@ -223,10 +245,10 @@ app.post('/avatars/:id/select-part', authMiddleware, async (req, res) => {
   try {
     const { slot, asset_id } = req.body;
     if (!slot || !asset_id) return res.status(400).json({ error: 'Missing slot or asset_id' });
-    const row = await getAsync(`SELECT owner, data FROM avatars WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT owner, data FROM avatars WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Avatar not found' });
     if (row.owner !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
-    const asset = await getAsync(`SELECT id, type, metadata FROM assets WHERE id = ?`, [asset_id]);
+    const asset = await getAsync(`SELECT id, type, metadata FROM assets WHERE id = $1`, [asset_id]);
     if (!asset) return res.status(400).json({ error: 'Asset not found' });
     if (asset.type !== 'bodypart') return res.status(400).json({ error: 'Asset is not a bodypart' });
     let md = {};
@@ -236,7 +258,7 @@ app.post('/avatars/:id/select-part', authMiddleware, async (req, res) => {
     try { data = JSON.parse(row.data || '{}'); } catch (ex) { data = {}; }
     if (!data.parts) data.parts = {};
     data.parts[slot] = asset.id;
-    await runAsync(`UPDATE avatars SET data = ? WHERE id = ?`, [JSON.stringify(data), req.params.id]);
+    await runAsync(`UPDATE avatars SET data = $1 WHERE id = $2`, [JSON.stringify(data), req.params.id]);
     res.json({ ok: true, avatar: { id: req.params.id, data } });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -246,9 +268,13 @@ app.post('/avatars/:id/select-part', authMiddleware, async (req, res) => {
 app.post('/avatars', authMiddleware, async (req, res) => {
   try {
     const { name, data } = req.body;
-    const result = await runAsync(`INSERT INTO avatars (owner, name, data, is_default) VALUES (?, ?, ?, 0)`,
-      [req.user.id, name || 'My Avatar', JSON.stringify(data || {})]);
-    res.json({ id: result.lastID });
+    const result = await runAsync(
+      `INSERT INTO avatars (owner, name, data, is_default)
+       VALUES ($1, $2, $3, FALSE)
+       RETURNING id`,
+      [req.user.id, name || 'My Avatar', JSON.stringify(data || {})]
+    );
+    res.json({ id: result.rows[0].id });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
   }
@@ -257,10 +283,10 @@ app.post('/avatars', authMiddleware, async (req, res) => {
 app.put('/avatars/:id', authMiddleware, async (req, res) => {
   try {
     const { name, data } = req.body;
-    const row = await getAsync(`SELECT owner FROM avatars WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT owner FROM avatars WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     if (row.owner !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
-    await runAsync(`UPDATE avatars SET name = ?, data = ? WHERE id = ?`,
+    await runAsync(`UPDATE avatars SET name = $1, data = $2 WHERE id = $3`,
       [name || 'Avatar', JSON.stringify(data || {}), req.params.id]);
     res.json({ ok: true });
   } catch (err) {
@@ -272,9 +298,13 @@ app.put('/avatars/:id', authMiddleware, async (req, res) => {
 app.post('/games', authMiddleware, async (req, res) => {
   try {
     const { title, description, genre, maxPlayers, thumbnail } = req.body;
-    const result = await runAsync(`INSERT INTO games (owner, title, description, metadata, plays, rating) VALUES (?, ?, ?, ?, 0, 0)`,
-      [req.user.id, title || 'Untitled', description || '', JSON.stringify({ genre, maxPlayers, thumbnail })]);
-    res.json({ ok: true, id: result.lastID });
+    const result = await runAsync(
+      `INSERT INTO games (owner, title, description, metadata, plays, rating)
+       VALUES ($1, $2, $3, $4, 0, 0)
+       RETURNING id`,
+      [req.user.id, title || 'Untitled', description || '', JSON.stringify({ genre, maxPlayers, thumbnail })]
+    );
+    res.json({ ok: true, id: result.rows[0].id });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
   }
@@ -292,8 +322,8 @@ app.get('/search/games', async (req, res) => {
     
     const searchTerm = `%${query}%`;
     const rows = await allAsync(
-      `SELECT id, owner, title, description, metadata, plays, rating, published FROM games 
-       WHERE title LIKE ? OR description LIKE ? 
+      `SELECT id, owner, title, description, metadata, plays, rating, published FROM games
+       WHERE title ILIKE $1 OR description ILIKE $2
        ORDER BY plays DESC LIMIT 10`,
       [searchTerm, searchTerm]
     );
@@ -320,7 +350,7 @@ app.get('/search/users', async (req, res) => {
     const query = req.query.q || '';
     if (query.length < 2) return res.json([]);
     const searchTerm = `%${query}%`;
-    const rows = await allAsync(`SELECT id, username, created_at FROM users WHERE username LIKE ? LIMIT 10`, [searchTerm]);
+    const rows = await allAsync(`SELECT id, username, created_at FROM users WHERE username ILIKE $1 LIMIT 10`, [searchTerm]);
     res.json(rows.map(r => ({ id: r.id, username: r.username, created_at: r.created_at })));
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -329,7 +359,7 @@ app.get('/search/users', async (req, res) => {
 
 app.get('/games/:id', async (req, res) => {
   try {
-    const row = await getAsync(`SELECT * FROM games WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT * FROM games WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     const meta = JSON.parse(row.metadata || '{}');
     res.json({
@@ -354,11 +384,11 @@ app.get('/games/:id', async (req, res) => {
 app.put('/games/:id', authMiddleware, async (req, res) => {
   try {
     const { title, description, genre, maxPlayers, thumbnail } = req.body;
-    const row = await getAsync(`SELECT owner FROM games WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT owner FROM games WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     if (row.owner !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
     
-    await runAsync(`UPDATE games SET title = ?, description = ?, metadata = ? WHERE id = ?`,
+    await runAsync(`UPDATE games SET title = $1, description = $2, metadata = $3 WHERE id = $4`,
       [title, description, JSON.stringify({ genre, maxPlayers, thumbnail }), req.params.id]);
     res.json({ ok: true });
   } catch (err) {
@@ -368,11 +398,11 @@ app.put('/games/:id', authMiddleware, async (req, res) => {
 
 app.delete('/games/:id', authMiddleware, async (req, res) => {
   try {
-    const row = await getAsync(`SELECT owner FROM games WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT owner FROM games WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     if (row.owner !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
     
-    await runAsync(`DELETE FROM games WHERE id = ?`, [req.params.id]);
+    await runAsync(`DELETE FROM games WHERE id = $1`, [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -381,12 +411,12 @@ app.delete('/games/:id', authMiddleware, async (req, res) => {
 
 app.post('/games/:id/publish', authMiddleware, async (req, res) => {
   try {
-    const row = await getAsync(`SELECT owner, published FROM games WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT owner, published FROM games WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     if (row.owner !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
     
     const newStatus = row.published ? 0 : 1;
-    await runAsync(`UPDATE games SET published = ? WHERE id = ?`, [newStatus, req.params.id]);
+    await runAsync(`UPDATE games SET published = $1 WHERE id = $2`, [newStatus, req.params.id]);
     res.json({ ok: true, published: !!newStatus });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -399,8 +429,8 @@ app.post('/purchase', authMiddleware, async (req, res) => {
     const { amount } = req.body;
     const value = parseInt(amount, 10) || 0;
     if (value <= 0) return res.status(400).json({ error: 'Invalid amount' });
-    await runAsync(`UPDATE users SET balance = balance + ? WHERE id = ?`, [value, req.user.id]);
-    await runAsync(`INSERT INTO transactions (user_id, amount, type) VALUES (?, ?, ?)`,
+    await runAsync(`UPDATE users SET balance = balance + $1 WHERE id = $2`, [value, req.user.id]);
+    await runAsync(`INSERT INTO transactions (user_id, amount, type) VALUES ($1, $2, $3)`,
       [req.user.id, value, 'purchase']);
     res.json({ ok: true, added: value });
   } catch (err) {
@@ -421,7 +451,7 @@ app.post('/payment/create-checkout', authMiddleware, async (req, res) => {
 // Creabux / Currency endpoints
 app.get('/creabux', authMiddleware, async (req, res) => {
   try {
-    const row = await getAsync(`SELECT creabux FROM users WHERE id = ?`, [req.user.id]);
+    const row = await getAsync(`SELECT creabux FROM users WHERE id = $1`, [req.user.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     res.json({ creabux: row.creabux });
   } catch (err) {
@@ -435,7 +465,7 @@ app.post('/creabux/purchase', authMiddleware, async (req, res) => {
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
     // In a real app, integrate with payment processor
     // For now, just update balance for demo
-    await runAsync(`UPDATE users SET creabux = creabux + ? WHERE id = ? AND is_admin = 0`, 
+    await runAsync(`UPDATE users SET creabux = creabux + $1 WHERE id = $2 AND is_admin = FALSE`, 
       [amount, req.user.id]);
     res.json({ ok: true, creabux: amount });
   } catch (err) {
@@ -451,7 +481,7 @@ app.post('/payment/webhook', (req, res) => {
 // Moderation
 async function adminMiddleware(req, res, next) {
   try {
-    const row = await getAsync(`SELECT is_admin FROM users WHERE id = ?`, [req.user.id]);
+    const row = await getAsync(`SELECT is_admin FROM users WHERE id = $1`, [req.user.id]);
     if (!row || !row.is_admin) return res.status(403).json({ error: 'Admin only' });
     next();
   } catch (err) {
@@ -462,9 +492,13 @@ async function adminMiddleware(req, res, next) {
 app.post('/report', authMiddleware, async (req, res) => {
   try {
     const { content_type, content_id, reason } = req.body;
-    const result = await runAsync(`INSERT INTO reports (reporter, content_type, content_id, reason) VALUES (?, ?, ?, ?)`,
-      [req.user.id, content_type, content_id, reason || '']);
-    res.json({ id: result.lastID });
+    const result = await runAsync(
+      `INSERT INTO reports (reporter, content_type, content_id, reason)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [req.user.id, content_type, content_id, reason || '']
+    );
+    res.json({ id: result.rows[0].id });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
   }
@@ -481,7 +515,7 @@ app.get('/admin/reports', authMiddleware, adminMiddleware, async (req, res) => {
 
 app.delete('/admin/assets/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    await runAsync(`DELETE FROM assets WHERE id = ?`, [req.params.id]);
+    await runAsync(`DELETE FROM assets WHERE id = $1`, [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -490,7 +524,7 @@ app.delete('/admin/assets/:id', authMiddleware, adminMiddleware, async (req, res
 
 app.delete('/admin/games/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    await runAsync(`DELETE FROM games WHERE id = ?`, [req.params.id]);
+    await runAsync(`DELETE FROM games WHERE id = $1`, [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -500,7 +534,7 @@ app.delete('/admin/games/:id', authMiddleware, adminMiddleware, async (req, res)
 // API endpoint to get all games
 app.get('/api/games', async (req, res) => {
   try {
-    const rows = await allAsync(`SELECT id, owner, title, description, metadata, plays, rating, published, created_at FROM games WHERE published = 1 ORDER BY plays DESC`);
+    const rows = await allAsync(`SELECT id, owner, title, description, metadata, plays, rating, published, created_at FROM games WHERE published = TRUE ORDER BY plays DESC`);
     const games = rows.map(r => {
       const meta = JSON.parse(r.metadata || '{}');
       return {
@@ -525,7 +559,7 @@ app.get('/api/games', async (req, res) => {
 // API endpoint to get game details
 app.get('/api/games/:id', async (req, res) => {
   try {
-    const row = await getAsync(`SELECT * FROM games WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT * FROM games WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     const meta = JSON.parse(row.metadata || '{}');
     res.json({
@@ -550,7 +584,7 @@ app.get('/api/games/:id', async (req, res) => {
 // API endpoint to get user profile
 app.get('/api/users/:id', async (req, res) => {
   try {
-    const row = await getAsync(`SELECT id, username, balance, creabux, is_admin, created_at FROM users WHERE id = ?`, [req.params.id]);
+    const row = await getAsync(`SELECT id, username, balance, creabux, is_admin, created_at FROM users WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'User not found' });
     res.json({
       id: row.id,
@@ -568,7 +602,7 @@ app.get('/api/users/:id', async (req, res) => {
 // API endpoint to get user's games
 app.get('/api/users/:id/games', async (req, res) => {
   try {
-    const rows = await allAsync(`SELECT id, owner, title, description, metadata, plays, rating, published, created_at FROM games WHERE owner = ? ORDER BY created_at DESC`, [req.params.id]);
+    const rows = await allAsync(`SELECT id, owner, title, description, metadata, plays, rating, published, created_at FROM games WHERE owner = $1 ORDER BY created_at DESC`, [req.params.id]);
     const games = rows.map(r => {
       const meta = JSON.parse(r.metadata || '{}');
       return {
@@ -592,7 +626,7 @@ app.get('/api/users/:id/games', async (req, res) => {
 // API endpoint to increment play count
 app.post('/api/games/:id/play', async (req, res) => {
   try {
-    await runAsync(`UPDATE games SET plays = plays + 1 WHERE id = ?`, [req.params.id]);
+    await runAsync(`UPDATE games SET plays = plays + 1 WHERE id = $1`, [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'DB error' });
@@ -602,7 +636,7 @@ app.post('/api/games/:id/play', async (req, res) => {
 // API endpoint for current user
 app.get('/api/user', authMiddleware, async (req, res) => {
   try {
-    const row = await getAsync(`SELECT id, username, balance, creabux, is_admin FROM users WHERE id = ?`, [req.user.id]);
+    const row = await getAsync(`SELECT id, username, balance, creabux, is_admin FROM users WHERE id = $1`, [req.user.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
     res.json({ id: row.id, username: row.username, balance: row.balance, creabux: row.creabux, is_admin: !!row.is_admin });
   } catch (err) {
