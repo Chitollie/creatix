@@ -649,6 +649,11 @@ for (const r of rewrites) {
   });
 }
 
+// Serve login at /login for compatibility with redirects
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 // Serve uploads
 app.use('/uploads', express.static(uploadsDir));
 
