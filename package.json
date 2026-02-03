@@ -1,5 +1,5 @@
 {
-  "name": "diy-ugc-platform",
+  "name": "creatix",
   "version": "0.1.0",
   "description": "Prototype backend for user-generated games, avatars, assets, chat and economy",
   "main": "server.js",
