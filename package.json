@@ -4,7 +4,7 @@
   "description": "Prototype backend for user-generated games, avatars, assets, chat and economy",
   "main": "server.js",
   "scripts": {
-    "start": "npm start"
+    "start": "node server.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",
