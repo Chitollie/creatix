@@ -8,7 +8,7 @@
     if (path.startsWith('/uploads') || path.startsWith('/css') || path.startsWith('/js') || path.startsWith('/images') || path.startsWith('/public')) return;
     const token = localStorage.getItem('token');
     if (!token) {
-      location.replace('/login');
+      location.replace('/login.html');
     }
   }catch(e){ console.warn('auth-guard error', e); }
 })();
