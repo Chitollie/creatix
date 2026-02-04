@@ -139,6 +139,7 @@
         </div>
     </div>
 
+    <script src="player-launch.js"></script>
     <script>
         const gameId = (() => {
             const qsId = new URLSearchParams(window.location.search).get('id');
@@ -234,9 +235,17 @@
 
         function playGame(id) {
             const title = document.querySelector('.game-header h1')?.textContent || 'Creatix';
-            const safeTitle = encodeURIComponent(title.replace(/\s+/g, '-'));
             const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-            window.location.href = `/play.html?gameId=${encodeURIComponent(id)}&title=${safeTitle}&session=${sessionId}`;
+            if (typeof window.launchCreatixPlayer === 'function') {
+                window.launchCreatixPlayer({
+                    gameId: id,
+                    title,
+                    session: sessionId
+                });
+            } else {
+                const safeTitle = encodeURIComponent(title.replace(/\s+/g, '-'));
+                window.location.href = `/play.html?gameId=${encodeURIComponent(id)}&title=${safeTitle}&session=${sessionId}`;
+            }
         }
 
         function escapeHtml(text) {

@@ -180,7 +180,14 @@ function updateFeaturedGame(game) {
     if (desc) desc.textContent = game.description || 'The featured experience on Creatix.';
     if (play) {
         play.onclick = () => {
-            window.location.href = `/${game.id}/${encodeURIComponent(game.title || game.name)}`;
+            if (typeof window.launchCreatixPlayer === 'function') {
+                window.launchCreatixPlayer({
+                    gameId: game.id,
+                    title: game.title || game.name
+                });
+            } else {
+                window.location.href = `/${game.id}/${encodeURIComponent(game.title || game.name)}`;
+            }
         };
     }
 }
