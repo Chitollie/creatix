@@ -1,7 +1,7 @@
 // Creatix Player launcher (custom protocol + fallback download)
-(function () {
+ (function () {
   const DEFAULT_DOWNLOAD = '/downloads/CreatixPlayerInstaller.exe';
-  const DEFAULT_PROTOCOL = 'creatix://play';
+  const DEFAULT_PROTOCOL = 'creatix-player://launch';
   const FALLBACK_DELAY_MS = 1600;
 
   function getDownloadUrl() {
@@ -13,10 +13,13 @@
 
   function buildProtocolUrl(opts) {
     const params = new URLSearchParams();
-    if (opts.gameId) params.set('game', String(opts.gameId));
+    const gameId = opts.gameId || opts.game_id;
+    const token = opts.token || localStorage.getItem('token');
+
+    if (gameId) params.set('game_id', String(gameId));
+    if (token) params.set('token', String(token));
     if (opts.title) params.set('title', String(opts.title));
     if (opts.url) params.set('url', String(opts.url));
-    if (opts.session) params.set('session', String(opts.session));
     return `${DEFAULT_PROTOCOL}?${params.toString()}`;
   }
 
@@ -82,11 +85,18 @@
 
   window.launchCreatixPlayer = function (opts) {
     const currentUrl = window.location.href;
+    const token = opts.token || localStorage.getItem('token');
+    if (!token) {
+      alert('Veuillez vous connecter pour lancer le jeu.');
+      window.location.href = '/login.html';
+      return;
+    }
+
     const protocolUrl = buildProtocolUrl({
       gameId: opts.gameId,
       title: opts.title,
       url: opts.url || currentUrl,
-      session: opts.session
+      token
     });
     attemptOpen(protocolUrl);
   };

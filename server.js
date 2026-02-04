@@ -2,6 +2,7 @@
 const express = require('express');
 const http = require('http');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { Server } = require('socket.io');
@@ -15,6 +16,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const livePlayers = new Map();
+const sessions = new Map();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -174,6 +176,49 @@ function authMiddleware(req, res, next) {
     res.status(401).json({ error: 'Invalid token' });
   }
 }
+
+function makeSessionId() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `sess_${crypto.randomBytes(16).toString('hex')}`;
+}
+
+async function getGameById(gameId) {
+  return await getAsync(`SELECT id, published FROM games WHERE id = $1`, [gameId]);
+}
+
+app.post('/join', async (req, res) => {
+  try {
+    const gameId = parseInt(req.body?.game_id ?? req.query?.game_id, 10);
+    const token = (req.body?.token ?? req.query?.token ?? '').trim();
+
+    if (!gameId || !token) {
+      return res.status(400).json({ error: 'game_id and token are required' });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(token, APP_SECRET);
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const game = await getGameById(gameId);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+
+    const session = {
+      session_id: makeSessionId(),
+      user_id: payload.id,
+      username: payload.username,
+      game_id: gameId,
+      created_at: new Date().toISOString()
+    };
+
+    sessions.set(session.session_id, session);
+    return res.json(session);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 app.post('/register', async (req, res) => {
   try {
@@ -665,6 +710,7 @@ app.get(/^\/(\d+)\/([^/]+)$/, (req, res) => {
 
 // Custom rewrites (pretty URLs -> static files)
 const rewrites = [
+  { source: '/player-check', destination: '/player-check.html' },
   { source: '/profil', destination: '/profil.html' },
   { source: '/panier', destination: '/panier.html' },
   { source: '/home', destination: '/index.html' },

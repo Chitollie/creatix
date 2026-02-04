@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creatix - Player Diagnostic</title>
+  <link rel="stylesheet" href="home.css" />
+  <style>
+    .diag-wrap {
+      max-width: 720px;
+      margin: 48px auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .diag-status {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .diag-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .diag-actions button, .diag-actions a {
+      padding: 10px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--success-color), #00d084);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #333;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <h1 class="logo"><a href="home.html" style="color: inherit; text-decoration: none;">Creatix</a></h1>
+      </div>
+      <div class="header-right">
+        <span class="user-info" id="user-info">Diagnostic Player</span>
+      </div>
+    </header>
+
+    <div class="diag-wrap">
+      <h2>Vérifier l'installation du Player</h2>
+      <p>Cette page tente d'ouvrir le protocole <code>creatix-player://</code>. Si le Player est installé, la page le détecte automatiquement.</p>
+
+      <div class="diag-actions">
+        <button class="btn-primary" id="btn-test">Tester le Player</button>
+        <a class="btn-secondary" href="/downloads/CreatixPlayerInstaller.exe">Télécharger le Player</a>
+      </div>
+
+      <div class="diag-status" id="diag-status">Statut: en attente du test.</div>
+    </div>
+  </div>
+
+  <script src="player-launch.js?v=1"></script>
+  <script>
+    const statusEl = document.getElementById('diag-status');
+    const btn = document.getElementById('btn-test');
+
+    function setStatus(text) {
+      statusEl.textContent = 'Statut: ' + text;
+    }
+
+    function tryOpen() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setStatus('veuillez vous connecter.');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      setStatus('test en cours...');
+
+      let didHide = false;
+      const onVisibility = () => { if (document.hidden) didHide = true; };
+      document.addEventListener('visibilitychange', onVisibility, { once: true });
+
+      if (typeof window.launchCreatixPlayer === 'function') {
+        window.launchCreatixPlayer({ gameId: 1, title: 'Creatix' });
+      }
+
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', onVisibility);
+        if (didHide) {
+          setStatus('Player détecté. Le protocole fonctionne.');
+        } else {
+          setStatus('Player non détecté. Installez-le puis réessayez.');
+        }
+      }, 1600);
+    }
+
+    btn.addEventListener('click', tryOpen);
+  </script>
+</body>
+</html>
