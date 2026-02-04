@@ -1,6 +1,6 @@
 // Creatix Player launcher (custom protocol + fallback download)
 (function () {
-  const DEFAULT_DOWNLOAD = '/downloads/CreatixPlayerSetup.exe';
+  const DEFAULT_DOWNLOAD = '/downloads/CreatixPlayerInstaller.exe';
   const DEFAULT_PROTOCOL = 'creatix://play';
   const FALLBACK_DELAY_MS = 1600;
 
