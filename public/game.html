@@ -139,7 +139,7 @@
         </div>
     </div>
 
-    <script src="player-launch.js"></script>
+    <script src="player-launch.js?v=1"></script>
     <script>
         const gameId = (() => {
             const qsId = new URLSearchParams(window.location.search).get('id');
@@ -243,8 +243,8 @@
                     session: sessionId
                 });
             } else {
-                const safeTitle = encodeURIComponent(title.replace(/\s+/g, '-'));
-                window.location.href = `/play.html?gameId=${encodeURIComponent(id)}&title=${safeTitle}&session=${sessionId}`;
+                // Fallback direct to installer if launcher script is missing
+                window.location.href = '/downloads/CreatixPlayerInstaller.exe';
             }
         }
 
